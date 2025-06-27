@@ -17,7 +17,6 @@ st.set_page_config(
 # === API CONFIG ===
 API_BASE_URL = "https://chatbot-ogq7.onrender.com"
 
-
 # === SESSION STATE INIT ===
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
@@ -33,10 +32,17 @@ if "booking_confirmed" not in st.session_state:
 
 # Initialize user_id safely
 if "user_id" not in st.session_state:
-    st.session_state.user_id = None
-    query_params = st.query_params
+    query_params = st.experimental_get_query_params()
     if "user_id" in query_params:
         st.session_state.user_id = query_params["user_id"][0]
+        # Link session
+        try:
+            requests.post(f"{API_BASE_URL}/link_session", json={
+                "session_id": st.session_state.session_id,
+                "user_id": st.session_state.user_id
+            })
+        except Exception as e:
+            st.warning(f"Linking session failed: {str(e)}")
 
 # === FUNCTIONS ===
 def send_message(message: str):
@@ -81,7 +87,7 @@ if st.session_state.user_id:
             st.markdown(f"""
                 **🗓️ {event.get('summary', 'No Title')}**
                 - ⏰ Start: `{start}`
-                - 🛑 End: `{end}`
+                - 😑 End: `{end}`
                 - 📄 Description: {event.get('description', 'N/A')}
                 ---
             """)
