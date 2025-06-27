@@ -1,5 +1,3 @@
-# === main.py (FastAPI backend) ===
-
 from fastapi import FastAPI, Request, Body, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,14 +12,19 @@ import uuid
 import dateparser
 import re
 from typing import Optional
+from dotenv import load_dotenv
+import tempfile
 
 from calendar_service import CalendarService
-from dotenv import load_dotenv
+
+# Load environment variables
 load_dotenv()
+
+# Debug print
 print("Loaded creds:", bool(os.environ.get("GOOGLE_OAUTH_CREDENTIALS")))
 
+# App setup
 app = FastAPI(title="Google Calendar Booking API")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,8 +34,7 @@ app.add_middleware(
 )
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
-
-REDIRECT_URI = 'http://localhost:8000/oauth2callback'
+REDIRECT_URI = 'https://chatbot-ogq7.onrender.com/oauth2callback' if os.getenv("RENDER") else 'http://localhost:8000/oauth2callback'
 
 user_tokens = {}
 chat_sessions = {}
@@ -40,9 +42,8 @@ chat_sessions = {}
 @app.get("/")
 async def home():
     return {"message": "Welcome to the Google Calendar Booking API"}
-import os
-import tempfile
 
+# Load client secrets to temp file
 CLIENT_SECRET_JSON = os.environ.get("GOOGLE_OAUTH_CREDENTIALS")
 if not CLIENT_SECRET_JSON:
     raise RuntimeError("Missing GOOGLE_OAUTH_CREDENTIALS environment variable")
@@ -50,7 +51,6 @@ if not CLIENT_SECRET_JSON:
 with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp_file:
     temp_file.write(CLIENT_SECRET_JSON)
     CLIENT_SECRET_FILE = temp_file.name
-
 
 @app.get("/auth")
 async def authorize():
@@ -87,29 +87,24 @@ async def oauth2callback(request: Request):
 
 @app.post("/link_session")
 async def link_session(request: dict):
-    """Link a chat session with an authenticated user"""
     session_id = request.get("session_id")
     user_id = request.get("user_id")
-    
+
     if user_id in user_tokens:
-        # Copy the user's credentials to the session_id
         user_tokens[session_id] = user_tokens[user_id]
-        print(f"[DEBUG] Linked session {session_id} with user {user_id}")
         return {"success": True, "message": "Session linked successfully"}
-    else:
-        return {"success": False, "message": "User not authenticated"}
+    return {"success": False, "message": "User not authenticated"}
 
 @app.get("/auth_status")
 async def auth_status(session_id: str = None):
-    """Check if a session is authenticated"""
     if session_id and session_id in user_tokens:
         return {"authenticated": True, "session_id": session_id}
-    
-    # Check if any user is authenticated
     if user_tokens:
         return {"authenticated": True, "available_users": list(user_tokens.keys())}
-    
     return {"authenticated": False}
+
+@app.get("/calendar/events")
+async def list_events(user_id: str):
     if user_id not in user_tokens:
         return {"error": "User not authorized. Go to /auth to connect."}
 
@@ -118,14 +113,10 @@ async def auth_status(session_id: str = None):
     service = build('calendar', 'v3', credentials=creds)
 
     events_result = service.events().list(
-        calendarId='primary',
-        maxResults=5,
-        singleEvents=True,
-        orderBy='startTime'
+        calendarId='primary', maxResults=5, singleEvents=True, orderBy='startTime'
     ).execute()
 
-    events = events_result.get('items', [])
-    return {"events": events}
+    return {"events": events_result.get('items', [])}
 
 class BookingRequest(BaseModel):
     user_id: str
@@ -152,6 +143,7 @@ async def book_event(data: BookingRequest):
         description=data.description
     )
     return result
+
 
 def parse_datetime_from_message(message: str) -> Optional[datetime]:
     """Enhanced datetime parsing function with manual parsing as primary method"""
