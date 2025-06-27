@@ -18,6 +18,7 @@ from typing import Optional
 from calendar_service import CalendarService
 from dotenv import load_dotenv
 load_dotenv()
+print("Loaded creds:", bool(os.environ.get("GOOGLE_OAUTH_CREDENTIALS")))
 
 app = FastAPI(title="Google Calendar Booking API")
 
