@@ -15,7 +15,8 @@ st.set_page_config(
 )
 
 # === API CONFIG ===
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = "https://chatbot-ogq7.onrender.com"
+
 
 # === SESSION STATE INIT ===
 if "session_id" not in st.session_state:
@@ -33,7 +34,7 @@ if "booking_confirmed" not in st.session_state:
 # Initialize user_id safely
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
-    query_params = st.experimental_get_query_params()
+    query_params = st.query_params
     if "user_id" in query_params:
         st.session_state.user_id = query_params["user_id"][0]
 

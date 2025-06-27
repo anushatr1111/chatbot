@@ -16,6 +16,8 @@ import re
 from typing import Optional
 
 from calendar_service import CalendarService
+from dotenv import load_dotenv
+load_dotenv()
 
 app = FastAPI(title="Google Calendar Booking API")
 
@@ -28,7 +30,7 @@ app.add_middleware(
 )
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
-CLIENT_SECRET_FILE = 'credentials.json'
+
 REDIRECT_URI = 'http://localhost:8000/oauth2callback'
 
 user_tokens = {}
@@ -37,6 +39,17 @@ chat_sessions = {}
 @app.get("/")
 async def home():
     return {"message": "Welcome to the Google Calendar Booking API"}
+import os
+import tempfile
+
+CLIENT_SECRET_JSON = os.environ.get("GOOGLE_OAUTH_CREDENTIALS")
+if not CLIENT_SECRET_JSON:
+    raise RuntimeError("Missing GOOGLE_OAUTH_CREDENTIALS environment variable")
+
+with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp_file:
+    temp_file.write(CLIENT_SECRET_JSON)
+    CLIENT_SECRET_FILE = temp_file.name
+
 
 @app.get("/auth")
 async def authorize():
